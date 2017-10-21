@@ -6,6 +6,7 @@ Kawa is a static analaysis tool for Python projects.
 
 1. Install [pipenv][pipenv].
 1. Run `pipenv install --dev`
+1. Run `pipenv shell`
 
 ### Running the test suite
 
