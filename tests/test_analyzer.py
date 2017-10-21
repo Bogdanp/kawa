@@ -15,7 +15,7 @@ from kawa.analyzer import Module, Class, Function, Variable, analyze
         Module(
             name="kawa.example",
             docstring="This module does something.",
-            source_location=(1, 0),
+            source_location=(0, 0),
             definitions=[],
             references=[],
         )
@@ -157,7 +157,6 @@ def f():
 
         Module(
             name="kawa.example",
-            source_location=(1, 0),
             definitions=[
                 Function(
                     name="kawa.example.f",

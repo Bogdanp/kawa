@@ -10,9 +10,24 @@ import warnings
 from collections import namedtuple
 
 
+class SourceLocation(namedtuple("SourceLocation", ("line_number", "column_offset"))):
+    pass
+
+
 class Variable(namedtuple("Variable", ("name", "source_location"))):
     """Represents a variable reference or  declaration.
     """
+
+    def flatten(self):
+        yield self
+
+    @property
+    def metadata(self):
+        return {
+            "type": "variable",
+            "name": self.name,
+            "location": self.source_location,
+        }
 
 
 class Scope(namedtuple("Scope", (
@@ -21,26 +36,63 @@ class Scope(namedtuple("Scope", (
     """Represents the introduction of a new Scope.
     """
 
-    def __new__(cls, name, arguments=None, docstring=None, source_location=(1, 0), definitions=None, references=None):
+    def __new__(cls, name, arguments=None, docstring=None, source_location=None, definitions=None, references=None):
         return super().__new__(
-            cls, name, arguments, docstring, source_location,
+            cls, name, arguments, docstring, source_location or SourceLocation(0, 0),
             definitions or [], references or [],
         )
+
+    def flatten(self):
+        yield self
+
+        for definition in self.definitions:
+            yield from definition.flatten()
+
+        for reference in self.references:
+            yield from reference.flatten()
 
 
 class Module(Scope):
     """Represents a Python module declaration.
     """
 
+    @property
+    def metadata(self):
+        return {
+            "type": "module",
+            "name": self.name,
+            "docstring": self.docstring,
+            "location": self.source_location,
+        }
+
 
 class Class(Scope):
     """Represents a Python class declaration.
     """
 
+    @property
+    def metadata(self):
+        return {
+            "type": "class",
+            "name": self.name,
+            "docstring": self.docstring,
+            "location": self.source_location,
+        }
+
 
 class Function(Scope):
     """Represents a Python function declaration.
     """
+
+    @property
+    def metadata(self):
+        return {
+            "type": "function",
+            "name": self.name,
+            "arguments": self.arguments,
+            "docstring": self.docstring,
+            "location": self.source_location,
+        }
 
 
 def analyze(module_name, module_source):
@@ -145,7 +197,7 @@ def _get_docstring(node):
 
 
 def _get_source_location(node):
-    return node.lineno, node.col_offset
+    return SourceLocation(node.lineno, node.col_offset)
 
 
 def _find_definitions(parent_name, node_list):
