@@ -17,6 +17,11 @@ def find_definition(args):
     return indexer.lookup_definition(args.filename, args.line, args.column)
 
 
+def find_usages(args):
+    indexer.index_file(args.filename)
+    return indexer.lookup_references(args.filename, args.line, args.column)
+
+
 def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
@@ -27,7 +32,10 @@ def main():
     find_definition_parser = subparsers.add_parser("find_definition", help="Find where the thing at point is defined.")
     find_definition_parser.set_defaults(func=find_definition)
 
-    for p in (describe_parser, find_definition_parser):
+    find_usages_parser = subparsers.add_parser("find_usages", help="Find where the thing at point is defined.")
+    find_usages_parser.set_defaults(func=find_usages)
+
+    for p in (describe_parser, find_definition_parser, find_usages_parser):
         p.add_argument("filename", help="The name of the file to analyze.")
         p.add_argument("line", type=int)
         p.add_argument("column", type=int)
