@@ -15,7 +15,7 @@ class SourceLocation(namedtuple("SourceLocation", ("line_number", "column_offset
 
 
 class Variable(namedtuple("Variable", ("name", "source_location"))):
-    """Represents a variable reference or  declaration.
+    """Represents a variable declaration.
     """
 
     def flatten(self):
@@ -25,6 +25,22 @@ class Variable(namedtuple("Variable", ("name", "source_location"))):
     def metadata(self):
         return {
             "type": "variable",
+            "name": self.name,
+            "location": self.source_location,
+        }
+
+
+class Reference(namedtuple("Reference", ("name", "source_location"))):
+    """Represents a reference.
+    """
+
+    def flatten(self):
+        yield self
+
+    @property
+    def metadata(self):
+        return {
+            "type": "reference",
             "name": self.name,
             "location": self.source_location,
         }
@@ -107,13 +123,11 @@ def analyze(module_name, module_source):
       Module
     """
     module = ast.parse(module_source)
-    definitions = _find_definitions(module_name, module.body)
-
     return Module(
         name=module_name,
         docstring=_get_docstring(module),
-        definitions=definitions,
-        references=[],  # TODO
+        definitions=_find_definitions(module_name, module.body),
+        references=_find_references(module_name, module.body),
     )
 
 
@@ -152,7 +166,7 @@ def _analyze_definition(parent_name, class_node):
         docstring=_get_docstring(class_node),
         source_location=_get_source_location(class_node),
         definitions=_find_definitions(name, class_node.body),
-        references=[],  # TODO
+        references=_find_references(name, class_node.body),
     )
 
 
@@ -185,7 +199,28 @@ def _analyze_definition(parent_name, func_node):
         arguments=arguments,
         source_location=_get_source_location(func_node),
         definitions=_find_definitions(name, children),
-        references=[],  # TODO
+        references=_find_references(name, func_node.body),
+    )
+
+
+@multipledispatch.dispatch(str, ast.Call)
+def _analyze_reference(parent_name, call_node):
+    yield from _analyze_reference(parent_name, call_node.func)
+
+
+@multipledispatch.dispatch(str, (ast.Expr, ast.Return))
+def _analyze_reference(parent_name, node):
+    try:
+        yield from _analyze_reference(parent_name, node.value)
+    except NotImplementedError as e:
+        pass
+
+
+@multipledispatch.dispatch(str, ast.Name)
+def _analyze_reference(parent_name, name_node):
+    yield Variable(
+        name=f"{parent_name}.{name_node.id}",
+        source_location=_get_source_location(name_node),
     )
 
 
@@ -214,3 +249,18 @@ def _find_definitions(parent_name, node_list):
             warnings.warn(f"Cannot analyze {type(node).__name__} nodes.")
 
     return definitions
+
+
+def _find_references(parent_name, node_list):
+    references = []
+    for node in node_list:
+        try:
+            res = _analyze_reference(parent_name, node)
+            if isinstance(res, (list, types.GeneratorType)):
+                references.extend(res)
+            else:
+                references.append(res)
+        except NotImplementedError:
+            pass
+
+    return references

@@ -22,4 +22,4 @@ def test_qualify_module_can_qualify_modules():
     name = find_qualified_name(filename)
 
     # Then I should get its qualified name
-    assert name == "tests.test_indexer"
+    assert name == "tests.test_common"

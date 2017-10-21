@@ -1,6 +1,6 @@
 import pytest
 
-from kawa.analyzer import Module, Class, Function, Variable, analyze
+from kawa.analyzer import SourceLocation, Module, Class, Function, Variable, Reference, analyze
 
 
 @pytest.mark.parametrize("module_name,module_source,expected_output", [
@@ -15,7 +15,7 @@ from kawa.analyzer import Module, Class, Function, Variable, analyze
         Module(
             name="kawa.example",
             docstring="This module does something.",
-            source_location=(0, 0),
+            source_location=SourceLocation(0, 0),
             definitions=[],
             references=[],
         )
@@ -34,19 +34,19 @@ z, a = (1, 2)
             definitions=[
                 Variable(
                     name="kawa.example.x",
-                    source_location=(2, 0),
+                    source_location=SourceLocation(2, 0),
                 ),
                 Variable(
                     name="kawa.example.y",
-                    source_location=(3, 0),
+                    source_location=SourceLocation(3, 0),
                 ),
                 Variable(
                     name="kawa.example.z",
-                    source_location=(4, 0),
+                    source_location=SourceLocation(4, 0),
                 ),
                 Variable(
                     name="kawa.example.a",
-                    source_location=(4, 3),
+                    source_location=SourceLocation(4, 3),
                 )
             ],
         ),
@@ -72,13 +72,13 @@ def g():
                     name="kawa.example.f",
                     arguments=[],
                     docstring="This function returns the number 42.",
-                    source_location=(2, 0),
+                    source_location=SourceLocation(2, 0),
                 ),
                 Function(
                     name="kawa.example.g",
                     arguments=[],
                     docstring=None,
-                    source_location=(7, 0),
+                    source_location=SourceLocation(7, 0),
                 )
             ],
         )
@@ -104,20 +104,20 @@ class Reader:
             definitions=[
                 Class(
                     name="kawa.example.Reader",
-                    source_location=(2, 0),
+                    source_location=SourceLocation(2, 0),
                     definitions=[
                         Function(
                             name="kawa.example.Reader.__init__",
                             arguments=["self", "filename"],
-                            source_location=(3, 4),
+                            source_location=SourceLocation(3, 4),
                             definitions=[
                                 Variable(
                                     name="kawa.example.Reader.__init__.self",
-                                    source_location=(3, 17),
+                                    source_location=SourceLocation(3, 17),
                                 ),
                                 Variable(
                                     name="kawa.example.Reader.__init__.filename",
-                                    source_location=(3, 23),
+                                    source_location=SourceLocation(3, 23),
                                 ),
                             ],
                             references=[],
@@ -126,15 +126,15 @@ class Reader:
                             name="kawa.example.Reader.read",
                             arguments=["self", "count"],
                             docstring='Reads "count" bytes from a file.',
-                            source_location=(7, 4),
+                            source_location=SourceLocation(7, 4),
                             definitions=[
                                 Variable(
                                     name="kawa.example.Reader.read.self",
-                                    source_location=(7, 13),
+                                    source_location=SourceLocation(7, 13),
                                 ),
                                 Variable(
                                     name="kawa.example.Reader.read.count",
-                                    source_location=(7, 19),
+                                    source_location=SourceLocation(7, 19),
                                 ),
                             ],
                             references=[],
@@ -161,17 +161,22 @@ def f():
                 Function(
                     name="kawa.example.f",
                     arguments=[],
-                    source_location=(2, 0),
+                    source_location=SourceLocation(2, 0),
                     definitions=[
                         Function(
                             name="kawa.example.f.g",
                             arguments=[],
-                            source_location=(3, 4),
+                            source_location=SourceLocation(3, 4),
                             definitions=[],
                             references=[],
                         )
                     ],
-                    references=[],
+                    references=[
+                        Reference(
+                            name="kawa.example.f.g",
+                            source_location=SourceLocation(5, 11),
+                        )
+                    ],
                 ),
             ],
             references=[],
@@ -192,13 +197,47 @@ def f(a, b=None, *args, **kwargs):
                 Function(
                     name="kawa.example.f",
                     arguments=["a", "b", "*args", "**kwargs"],
-                    source_location=(2, 0),
+                    source_location=SourceLocation(2, 0),
                     definitions=[
-                        Variable(name="kawa.example.f.a", source_location=(2, 6)),
-                        Variable(name="kawa.example.f.b", source_location=(2, 9)),
-                        Variable(name="kawa.example.f.args", source_location=(2, 18)),
-                        Variable(name="kawa.example.f.kwargs", source_location=(2, 26)),
+                        Variable(name="kawa.example.f.a", source_location=SourceLocation(2, 6)),
+                        Variable(name="kawa.example.f.b", source_location=SourceLocation(2, 9)),
+                        Variable(name="kawa.example.f.args", source_location=SourceLocation(2, 18)),
+                        Variable(name="kawa.example.f.kwargs", source_location=SourceLocation(2, 26)),
                     ],
+                )
+            ],
+        )
+    ),
+
+    (
+        # Test function reference discovery
+        "kawa.example",
+        """
+def f():
+    pass
+
+def g():
+    return f()
+        """,
+
+        Module(
+            name="kawa.example",
+            definitions=[
+                Function(
+                    name="kawa.example.f",
+                    arguments=[],
+                    source_location=SourceLocation(2, 0),
+                ),
+                Function(
+                    name="kawa.example.g",
+                    arguments=[],
+                    source_location=SourceLocation(5, 0),
+                    references=[
+                        Reference(
+                            name="kawa.example.g.f",
+                            source_location=SourceLocation(6, 11),
+                        )
+                    ]
                 )
             ],
         )

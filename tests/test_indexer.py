@@ -1,12 +1,17 @@
 import pytest
+import os
 
 from kawa.indexer import Indexer
+
+
+def rel(path):
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), path))
 
 
 @pytest.fixture
 def indexer():
     indexer = Indexer()
-    indexer.index_file("examples/reader.py")
+    indexer.index_file(rel("examples/reader.py"))
     return indexer
 
 
@@ -15,7 +20,7 @@ def test_indexers_can_index_files():
     indexer = Indexer()
 
     # When I attempt to index a file
-    indexer.index_file("examples/reader.py")
+    indexer.index_file(rel("examples/reader.py"))
 
     # Then I expect the file to be indexed
     assert "tests.examples.reader" in indexer.modules
@@ -53,7 +58,7 @@ def test_indexers_can_index_files():
     ),
 ])
 def test_indexers_can_look_up_entities(indexer, filename, line_number, column_offset, expected):
-    assert indexer.lookup_entity(filename, line_number, column_offset).name == expected
+    assert indexer.lookup_entity(rel(filename), line_number, column_offset).name == expected
 
 
 @pytest.mark.parametrize("filename,line_number,column_offset,expected", [
@@ -89,4 +94,4 @@ def test_indexers_can_look_up_entities(indexer, filename, line_number, column_of
     ),
 ])
 def test_indexers_can_look_up_metadata(indexer, filename, line_number, column_offset, expected):
-    assert indexer.lookup_metadata(filename, line_number, column_offset) == expected
+    assert indexer.lookup_metadata(rel(filename), line_number, column_offset) == expected

@@ -7,7 +7,11 @@ from .common import find_qualified_name
 
 
 class Indexer:
-    """
+    """The indexer keeps track of a set of modules in order to
+    facilitate analyzed entity lookup.
+
+    Attributes:
+      modules(dict[str, entity])
     """
 
     def __init__(self):
