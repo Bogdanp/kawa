@@ -88,8 +88,8 @@ which is able to look up those entities by their position in a file.
 
 ## TODOs
 
-* [ ] Implement scoped lookups.
-* [ ] Add support for finding usages.
+* [x] Implement scoped lookups.
+* [x] Add support for finding usages.
 * [ ] Add an "interactive" mode so that editors can spawn a Kawa
   process and interface with it via pipes.  That way they won't have
   to take the perf. hit of spawning a new process every time the user

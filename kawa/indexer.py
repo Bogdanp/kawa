@@ -106,7 +106,8 @@ class Indexer:
         try:
             return self.entities_by_module[module_name][entity.name].metadata
         except KeyError:
-            raise NotImplementedError("Scoped resolution is not implemented.")
+            name = self._resolve_reference(entity)
+            return self.entities_by_fqn[name].metadata
 
     def lookup_references(self, filename, line_number, column_offset):
         """Look up the list of references of an entity.
@@ -123,7 +124,7 @@ class Indexer:
 
     def _resolve_reference(self, reference):
         name = reference.name
-        while name:
+        while True:
             if name in self.entities_by_fqn or "." not in name:
                 return name
 

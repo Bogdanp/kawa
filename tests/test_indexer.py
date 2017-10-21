@@ -136,6 +136,11 @@ def test_indexers_can_look_up_definitions(indexer, filename, line_number, column
                 "type": "reference",
                 "name": "tests.examples.reader.Reader.__init__.filename",
                 "location": (3, 24),
+            },
+            {
+                "type": "reference",
+                "name": "tests.examples.reader.Reader.__init__.filename",
+                "location": (4, 25),
             }
         ]
     ),

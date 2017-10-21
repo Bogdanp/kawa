@@ -207,12 +207,26 @@ def _analyze_definition(parent_name, func_node):
 def _analyze_reference(parent_name, call_node):
     yield from _analyze_reference(parent_name, call_node.func)
 
+    for arg in call_node.args:
+        yield from _analyze_reference(parent_name, arg)
+
+    for keyword in call_node.keywords:
+        yield from _analyze_reference(parent_name, keyword.arg)
+
 
 @multipledispatch.dispatch(str, (ast.Assign, ast.Expr, ast.Return))
 def _analyze_reference(parent_name, node):
     try:
         yield from _analyze_reference(parent_name, node.value)
-    except NotImplementedError as e:
+    except NotImplementedError:
+        pass
+
+
+@multipledispatch.dispatch(str, ast.Attribute)
+def _analyze_reference(parent_name, node):
+    try:
+        yield from _analyze_reference(parent_name, node.value)
+    except NotImplementedError:
         pass
 
 

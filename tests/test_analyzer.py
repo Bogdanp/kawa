@@ -29,6 +29,7 @@ x = 42
 y = None
 z, a = (1, 2)
         """,
+
         Module(
             name="kawa.example",
             definitions=[
@@ -128,6 +129,10 @@ class Reader:
                                 Reference(
                                     name="kawa.example.Reader.__init__.open",
                                     source_location=SourceLocation(5, 20),
+                                ),
+                                Reference(
+                                    name="kawa.example.Reader.__init__.filename",
+                                    source_location=SourceLocation(5, 25),
                                 ),
                             ],
                         ),
