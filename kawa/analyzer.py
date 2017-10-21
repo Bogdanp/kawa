@@ -208,7 +208,7 @@ def _analyze_reference(parent_name, call_node):
     yield from _analyze_reference(parent_name, call_node.func)
 
 
-@multipledispatch.dispatch(str, (ast.Expr, ast.Return))
+@multipledispatch.dispatch(str, (ast.Assign, ast.Expr, ast.Return))
 def _analyze_reference(parent_name, node):
     try:
         yield from _analyze_reference(parent_name, node.value)
@@ -218,7 +218,7 @@ def _analyze_reference(parent_name, node):
 
 @multipledispatch.dispatch(str, ast.Name)
 def _analyze_reference(parent_name, name_node):
-    yield Variable(
+    yield Reference(
         name=f"{parent_name}.{name_node.id}",
         source_location=_get_source_location(name_node),
     )

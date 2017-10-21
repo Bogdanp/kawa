@@ -120,7 +120,16 @@ class Reader:
                                     source_location=SourceLocation(3, 23),
                                 ),
                             ],
-                            references=[],
+                            references=[
+                                Reference(
+                                    name="kawa.example.Reader.__init__.filename",
+                                    source_location=SourceLocation(4, 24),
+                                ),
+                                Reference(
+                                    name="kawa.example.Reader.__init__.open",
+                                    source_location=SourceLocation(5, 20),
+                                ),
+                            ],
                         ),
                         Function(
                             name="kawa.example.Reader.read",

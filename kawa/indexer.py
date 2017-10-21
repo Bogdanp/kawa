@@ -2,7 +2,7 @@ import os
 
 from collections import defaultdict
 
-from .analyzer import analyze
+from .analyzer import Reference, analyze
 from .common import find_qualified_name
 
 
@@ -36,7 +36,8 @@ class Indexer:
         self.source_locations_by_module[module_name] = source_locations = defaultdict(dict)
         for entity in module.flatten():
             location = entity.source_location
-            entities[entity.name] = entity
+            if not isinstance(entity, Reference):
+                entities[entity.name] = entity
             source_locations[location.line_number][location.column_offset] = entity
 
     def lookup_entity(self, filename, line_number, column_offset):
@@ -54,10 +55,9 @@ class Indexer:
         if module_name not in self.modules:
             self.index_file(filename)
 
-        try:
-            source_locations = self.source_locations_by_module[module_name]
-            columns_at_line = source_locations[line_number]
-        except KeyError:
+        source_locations = self.source_locations_by_module[module_name]
+        columns_at_line = source_locations[line_number]
+        if not columns_at_line:
             return None
 
         closest_column = 0
@@ -85,3 +85,27 @@ class Indexer:
         if not entity:
             return None
         return entity.metadata
+
+    def lookup_definition(self, filename, line_number, column_offset):
+        """Look up the definition of the entity at a given location.
+
+        Parameters:
+          filename(str):
+          line_number(int):
+          column_offset(int)
+
+        Returns:
+          The metadata of the entity's definition or None.
+        """
+        module_name = find_qualified_name(filename)
+        entity = self.lookup_entity(filename, line_number, column_offset)
+        if not entity:
+            return None
+
+        if not isinstance(entity, Reference):
+            return entity.metadata
+
+        try:
+            return self.entities_by_module[module_name][entity.name].metadata
+        except KeyError:
+            raise NotImplementedError("Scoped resolution is not implemented.")

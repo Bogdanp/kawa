@@ -13,3 +13,6 @@ def read(filename, count):
     """Read "count" bytes from "filename".
     """
     return Reader(filename).read(count)
+
+
+content = read("example", 10)

@@ -95,3 +95,29 @@ def test_indexers_can_look_up_entities(indexer, filename, line_number, column_of
 ])
 def test_indexers_can_look_up_metadata(indexer, filename, line_number, column_offset, expected):
     assert indexer.lookup_metadata(rel(filename), line_number, column_offset) == expected
+
+
+@pytest.mark.parametrize("filename,line_number,column_offset,expected", [
+    (
+        "examples/reader.py", 1, 5,
+        {
+            "type": "class",
+            "name": "tests.examples.reader.Reader",
+            "docstring": None,
+            "location": (1, 0),
+        }
+    ),
+
+    (
+        "examples/reader.py", 18, 10,
+        {
+            "type": "function",
+            "name": "tests.examples.reader.read",
+            "arguments": ["filename", "count"],
+            "docstring": 'Read "count" bytes from "filename".',
+            "location": (12, 0),
+        }
+    ),
+])
+def test_indexers_can_look_up_definitions(indexer, filename, line_number, column_offset, expected):
+    assert indexer.lookup_definition(rel(filename), line_number, column_offset) == expected
