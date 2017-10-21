@@ -10,7 +10,9 @@ import warnings
 from collections import namedtuple
 
 
-class SourceLocation(namedtuple("SourceLocation", ("line_number", "column_offset"))):
+class SourceLocation(namedtuple("SourceLocation", (
+        "filename", "line_number", "column_offset",
+))):
     pass
 
 
@@ -26,7 +28,7 @@ class Variable(namedtuple("Variable", ("name", "source_location"))):
         return {
             "type": "variable",
             "name": self.name,
-            "location": self.source_location,
+            "location": self.source_location._asdict(),
         }
 
 
@@ -42,7 +44,7 @@ class Reference(namedtuple("Reference", ("name", "source_location"))):
         return {
             "type": "reference",
             "name": self.name,
-            "location": self.source_location,
+            "location": self.source_location._asdict(),
         }
 
 
@@ -54,7 +56,7 @@ class Scope(namedtuple("Scope", (
 
     def __new__(cls, name, arguments=None, docstring=None, source_location=None, definitions=None, references=None):
         return super().__new__(
-            cls, name, arguments, docstring, source_location or SourceLocation(0, 0),
+            cls, name, arguments, docstring, source_location,
             definitions or [], references or [],
         )
 
@@ -78,7 +80,7 @@ class Module(Scope):
             "type": "module",
             "name": self.name,
             "docstring": self.docstring,
-            "location": self.source_location,
+            "location": self.source_location._asdict(),
         }
 
 
@@ -92,7 +94,7 @@ class Class(Scope):
             "type": "class",
             "name": self.name,
             "docstring": self.docstring,
-            "location": self.source_location,
+            "location": self.source_location._asdict(),
         }
 
 
@@ -107,135 +109,164 @@ class Function(Scope):
             "name": self.name,
             "arguments": self.arguments,
             "docstring": self.docstring,
-            "location": self.source_location,
+            "location": self.source_location._asdict(),
         }
 
 
-def analyze(module_name, module_source):
-    """Return a tree representing all the definitions and references
-    inside a given module.
-
-    Parameters:
-      module_name(str)
-      module_source(str)
-
-    Returns:
-      Module
+class Analyzer:
+    """Find all the definitions and references inside a module.
     """
-    module = ast.parse(module_source)
-    return Module(
-        name=module_name,
-        docstring=_get_docstring(module),
-        definitions=_find_definitions(module_name, module.body),
-        references=_find_references(module_name, module.body),
-    )
 
+    def __init__(self, filename, module_name, module_source):
+        self.filename = filename
+        self.module_name = module_name
+        self.module_source = module_source
 
-@multipledispatch.dispatch(str, ast.arg)
-def _analyze_definition(parent_name, arg_node):
-    return Variable(
-        name=f"{parent_name}.{arg_node.arg}",
-        source_location=_get_source_location(arg_node),
-    )
+    def analyze(self):
+        """Return a tree representing all the definitions and references
+        inside the module.
 
+        Returns:
+          Module
+        """
+        module = ast.parse(self.module_source)
+        return Module(
+            name=self.module_name,
+            docstring=_get_docstring(module),
+            source_location=SourceLocation(self.filename, 0, 0),
+            definitions=self._find_definitions(self.module_name, module.body),
+            references=self._find_references(self.module_name, module.body),
+        )
 
-@multipledispatch.dispatch(str, ast.Name)
-def _analyze_definition(parent_name, name_node):
-    return Variable(
-        name=f"{parent_name}.{name_node.id}",
-        source_location=_get_source_location(name_node),
-    )
+    @multipledispatch.dispatch(str, ast.arg)
+    def _analyze_definition(self, parent_name, arg_node):
+        return Variable(
+            name=f"{parent_name}.{arg_node.arg}",
+            source_location=self._get_source_location(arg_node),
+        )
 
+    @multipledispatch.dispatch(str, ast.Name)
+    def _analyze_definition(self, parent_name, name_node):
+        return Variable(
+            name=f"{parent_name}.{name_node.id}",
+            source_location=self._get_source_location(name_node),
+        )
 
-@multipledispatch.dispatch(str, ast.Assign)
-def _analyze_definition(parent_name, assign_node):
-    for target in assign_node.targets:
-        if isinstance(target, ast.Name):
-            yield _analyze_definition(parent_name, target)
+    @multipledispatch.dispatch(str, ast.Assign)
+    def _analyze_definition(self, parent_name, assign_node):
+        for target in assign_node.targets:
+            if isinstance(target, ast.Name):
+                yield self._analyze_definition(parent_name, target)
 
-        elif isinstance(target, ast.Tuple):
-            for tuple_target in target.elts:
-                yield _analyze_definition(parent_name, tuple_target)
+            elif isinstance(target, ast.Tuple):
+                for tuple_target in target.elts:
+                    yield self._analyze_definition(parent_name, tuple_target)
 
+    @multipledispatch.dispatch(str, ast.ClassDef)
+    def _analyze_definition(self, parent_name, class_node):
+        name = f"{parent_name}.{class_node.name}"
+        return Class(
+            name=name,
+            docstring=_get_docstring(class_node),
+            source_location=self._get_source_location(class_node),
+            definitions=self._find_definitions(name, class_node.body),
+            references=self._find_references(name, class_node.body),
+        )
 
-@multipledispatch.dispatch(str, ast.ClassDef)
-def _analyze_definition(parent_name, class_node):
-    name = f"{parent_name}.{class_node.name}"
-    return Class(
-        name=name,
-        docstring=_get_docstring(class_node),
-        source_location=_get_source_location(class_node),
-        definitions=_find_definitions(name, class_node.body),
-        references=_find_references(name, class_node.body),
-    )
+    @multipledispatch.dispatch(str, ast.FunctionDef)
+    def _analyze_definition(self, parent_name, func_node):
+        name = f"{parent_name}.{func_node.name}"
 
+        children = []
+        for field in ("args", "vararg", "kwonlyargs", "kwarg"):
+            field_value = getattr(func_node.args, field, None)
+            if not field_value:
+                continue
 
-@multipledispatch.dispatch(str, ast.FunctionDef)
-def _analyze_definition(parent_name, func_node):
-    name = f"{parent_name}.{func_node.name}"
+            if isinstance(field_value, list):
+                children.extend(field_value)
+            else:
+                children.append(field_value)
 
-    children = []
-    for field in ("args", "vararg", "kwonlyargs", "kwarg"):
-        field_value = getattr(func_node.args, field, None)
-        if not field_value:
-            continue
+        children += func_node.body
+        arguments = [arg.arg for arg in func_node.args.args]
+        if func_node.args.vararg:
+            arguments.append(f"*{func_node.args.vararg.arg}")
 
-        if isinstance(field_value, list):
-            children.extend(field_value)
-        else:
-            children.append(field_value)
+        if func_node.args.kwarg:
+            arguments.append(f"**{func_node.args.kwarg.arg}")
 
-    children += func_node.body
-    arguments = [arg.arg for arg in func_node.args.args]
-    if func_node.args.vararg:
-        arguments.append(f"*{func_node.args.vararg.arg}")
+        return Function(
+            name=name,
+            docstring=_get_docstring(func_node),
+            arguments=arguments,
+            source_location=self._get_source_location(func_node),
+            definitions=self._find_definitions(name, children),
+            references=self._find_references(name, func_node.body),
+        )
 
-    if func_node.args.kwarg:
-        arguments.append(f"**{func_node.args.kwarg.arg}")
+    @multipledispatch.dispatch(str, ast.Call)
+    def _analyze_reference(self, parent_name, call_node):
+        yield from self._analyze_reference(parent_name, call_node.func)
 
-    return Function(
-        name=name,
-        docstring=_get_docstring(func_node),
-        arguments=arguments,
-        source_location=_get_source_location(func_node),
-        definitions=_find_definitions(name, children),
-        references=_find_references(name, func_node.body),
-    )
+        for arg in call_node.args:
+            yield from self._analyze_reference(parent_name, arg)
 
+        for keyword in call_node.keywords:
+            yield from self._analyze_reference(parent_name, keyword.arg)
 
-@multipledispatch.dispatch(str, ast.Call)
-def _analyze_reference(parent_name, call_node):
-    yield from _analyze_reference(parent_name, call_node.func)
+    @multipledispatch.dispatch(str, (ast.Assign, ast.Expr, ast.Return))
+    def _analyze_reference(self, parent_name, node):
+        try:
+            yield from self._analyze_reference(parent_name, node.value)
+        except NotImplementedError:
+            pass
 
-    for arg in call_node.args:
-        yield from _analyze_reference(parent_name, arg)
+    @multipledispatch.dispatch(str, ast.Attribute)
+    def _analyze_reference(self, parent_name, node):
+        try:
+            yield from self._analyze_reference(parent_name, node.value)
+        except NotImplementedError:
+            pass
 
-    for keyword in call_node.keywords:
-        yield from _analyze_reference(parent_name, keyword.arg)
+    @multipledispatch.dispatch(str, ast.Name)
+    def _analyze_reference(self, parent_name, name_node):
+        yield Reference(
+            name=f"{parent_name}.{name_node.id}",
+            source_location=self._get_source_location(name_node),
+        )
 
+    def _get_source_location(self, node):
+        return SourceLocation(self.filename, node.lineno, node.col_offset)
 
-@multipledispatch.dispatch(str, (ast.Assign, ast.Expr, ast.Return))
-def _analyze_reference(parent_name, node):
-    try:
-        yield from _analyze_reference(parent_name, node.value)
-    except NotImplementedError:
-        pass
+    def _find_definitions(self, parent_name, node_list):
+        definitions = []
+        for node in node_list:
+            try:
+                if not isinstance(node, (ast.Expr, ast.Pass, ast.Raise, ast.Return)):
+                    res = self._analyze_definition(parent_name, node)
+                    if isinstance(res, (list, types.GeneratorType)):
+                        definitions.extend(res)
+                    else:
+                        definitions.append(res)
+            except NotImplementedError:
+                warnings.warn(f"Cannot analyze {type(node).__name__} nodes.")
 
+        return definitions
 
-@multipledispatch.dispatch(str, ast.Attribute)
-def _analyze_reference(parent_name, node):
-    try:
-        yield from _analyze_reference(parent_name, node.value)
-    except NotImplementedError:
-        pass
+    def _find_references(self, parent_name, node_list):
+        references = []
+        for node in node_list:
+            try:
+                res = self._analyze_reference(parent_name, node)
+                if isinstance(res, (list, types.GeneratorType)):
+                    references.extend(res)
+                else:
+                    references.append(res)
+            except NotImplementedError:
+                pass
 
-
-@multipledispatch.dispatch(str, ast.Name)
-def _analyze_reference(parent_name, name_node):
-    yield Reference(
-        name=f"{parent_name}.{name_node.id}",
-        source_location=_get_source_location(name_node),
-    )
+        return references
 
 
 def _get_docstring(node):
@@ -243,38 +274,3 @@ def _get_docstring(node):
     if docstring:
         return docstring.rstrip()
     return None
-
-
-def _get_source_location(node):
-    return SourceLocation(node.lineno, node.col_offset)
-
-
-def _find_definitions(parent_name, node_list):
-    definitions = []
-    for node in node_list:
-        try:
-            if not isinstance(node, (ast.Expr, ast.Pass, ast.Raise, ast.Return)):
-                res = _analyze_definition(parent_name, node)
-                if isinstance(res, (list, types.GeneratorType)):
-                    definitions.extend(res)
-                else:
-                    definitions.append(res)
-        except NotImplementedError:
-            warnings.warn(f"Cannot analyze {type(node).__name__} nodes.")
-
-    return definitions
-
-
-def _find_references(parent_name, node_list):
-    references = []
-    for node in node_list:
-        try:
-            res = _analyze_reference(parent_name, node)
-            if isinstance(res, (list, types.GeneratorType)):
-                references.extend(res)
-            else:
-                references.append(res)
-        except NotImplementedError:
-            pass
-
-    return references

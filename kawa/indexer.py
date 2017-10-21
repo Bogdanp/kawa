@@ -2,7 +2,7 @@ import os
 
 from collections import defaultdict
 
-from .analyzer import Reference, analyze
+from .analyzer import Analyzer, Reference
 from .common import find_qualified_name
 
 
@@ -32,7 +32,8 @@ class Indexer:
             module_name = module_name or find_qualified_name(filename)
             module_source = f.read()
 
-        self.modules[module_name] = module = analyze(module_name, module_source)
+        analyzer = Analyzer(filename, module_name, module_source)
+        self.modules[module_name] = module = analyzer.analyze()
         self.entities_by_module[module_name] = entities_by_module = {}
         self.source_locations_by_module[module_name] = source_locations = defaultdict(dict)
 

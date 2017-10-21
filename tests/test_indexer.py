@@ -68,7 +68,11 @@ def test_indexers_can_look_up_entities(indexer, filename, line_number, column_of
             "type": "module",
             "name": "tests.examples.reader",
             "docstring": None,
-            "location": (0, 0),
+            "location": {
+                "filename": rel("examples/reader.py"),
+                "line_number": 0,
+                "column_offset": 0,
+            }
         }
     ),
 
@@ -78,7 +82,11 @@ def test_indexers_can_look_up_entities(indexer, filename, line_number, column_of
             "type": "class",
             "name": "tests.examples.reader.Reader",
             "docstring": None,
-            "location": (1, 0),
+            "location": {
+                "filename": rel("examples/reader.py"),
+                "line_number": 1,
+                "column_offset": 0,
+            }
         }
     ),
 
@@ -89,7 +97,11 @@ def test_indexers_can_look_up_entities(indexer, filename, line_number, column_of
             "name": "tests.examples.reader.Reader.read",
             "arguments": ["self", "count"],
             "docstring": 'Reads "count" bytes from the current file.',
-            "location": (6, 4),
+            "location": {
+                "filename": rel("examples/reader.py"),
+                "line_number": 6,
+                "column_offset": 4,
+            }
         }
     ),
 ])
@@ -104,7 +116,11 @@ def test_indexers_can_look_up_metadata(indexer, filename, line_number, column_of
             "type": "class",
             "name": "tests.examples.reader.Reader",
             "docstring": None,
-            "location": (1, 0),
+            "location": {
+                "filename": rel("examples/reader.py"),
+                "line_number": 1,
+                "column_offset": 0,
+            }
         }
     ),
 
@@ -115,7 +131,11 @@ def test_indexers_can_look_up_metadata(indexer, filename, line_number, column_of
             "name": "tests.examples.reader.read",
             "arguments": ["filename", "count"],
             "docstring": 'Read "count" bytes from "filename".',
-            "location": (12, 0),
+            "location": {
+                "filename": rel("examples/reader.py"),
+                "line_number": 12,
+                "column_offset": 0,
+            }
         }
     ),
 ])
@@ -130,17 +150,29 @@ def test_indexers_can_look_up_definitions(indexer, filename, line_number, column
             {
                 "type": "variable",
                 "name": "tests.examples.reader.Reader.__init__.filename",
-                "location": (2, 23),
+                "location": {
+                    "filename": rel("examples/reader.py"),
+                    "line_number": 2,
+                    "column_offset": 23,
+                }
             },
             {
                 "type": "reference",
                 "name": "tests.examples.reader.Reader.__init__.filename",
-                "location": (3, 24),
+                "location": {
+                    "filename": rel("examples/reader.py"),
+                    "line_number": 3,
+                    "column_offset": 24,
+                }
             },
             {
                 "type": "reference",
                 "name": "tests.examples.reader.Reader.__init__.filename",
-                "location": (4, 25),
+                "location": {
+                    "filename": rel("examples/reader.py"),
+                    "line_number": 4,
+                    "column_offset": 25,
+                }
             }
         ]
     ),
@@ -153,12 +185,20 @@ def test_indexers_can_look_up_definitions(indexer, filename, line_number, column
                 "name": "tests.examples.reader.read",
                 "arguments": ["filename", "count"],
                 "docstring": 'Read "count" bytes from "filename".',
-                "location": (12, 0),
+                "location": {
+                    "filename": rel("examples/reader.py"),
+                    "line_number": 12,
+                    "column_offset": 0,
+                }
             },
             {
                 "type": "reference",
                 "name": "tests.examples.reader.read",
-                "location": (18, 10),
+                "location": {
+                    "filename": rel("examples/reader.py"),
+                    "line_number": 18,
+                    "column_offset": 10,
+                }
             }
         ]
     )
