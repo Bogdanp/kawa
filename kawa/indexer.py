@@ -120,6 +120,10 @@ class Indexer:
         if not entity:
             return []
 
+        if isinstance(entity, Reference):
+            name = self._resolve_reference(entity)
+            entity = self.entities_by_fqn[name]
+
         references = [entity] + self.references_by_fqn[entity.name]
         return [entity.metadata for entity in references]
 

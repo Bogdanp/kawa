@@ -201,6 +201,30 @@ def test_indexers_can_look_up_definitions(indexer, filename, line_number, column
                 }
             }
         ]
+    ),
+
+    (
+        "examples/reader.py", 15, 18,
+        [
+            {
+                "type": "variable",
+                "name": "tests.examples.reader.read.filename",
+                "location": {
+                    "filename": "/Users/bogdan/sandbox/kawa/tests/examples/reader.py",
+                    "line_number": 12,
+                    "column_offset": 9
+                }
+            },
+            {
+                "type": "reference",
+                "name": "tests.examples.reader.read.filename",
+                "location": {
+                    "filename": "/Users/bogdan/sandbox/kawa/tests/examples/reader.py",
+                    "line_number": 15,
+                    "column_offset": 18
+                }
+            }
+        ]
     )
 ])
 def test_indexers_can_look_up_references(indexer, filename, line_number, column_offset, expected):
