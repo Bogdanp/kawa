@@ -84,7 +84,7 @@ $ python -m kawa find_definition tests/examples/reader.py 18 10
 }
 ```
 
-### `find_references`
+### `find_usages`
 
 ```
 $ python -m kawa find_usages tests/examples/reader.py 12 9
