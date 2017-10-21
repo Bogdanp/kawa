@@ -1,2 +1,5 @@
+.cache
+.coverage
 __pycache__
+htmlcov
 kawa.egg-info

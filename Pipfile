@@ -5,9 +5,10 @@ verify_ssl = true
 
 
 [packages]
-
+multipledispatch = "*"
 
 
 [dev-packages]
-pytest = "*"
 kawa = {path = ".", editable = true}
+pytest = "*"
+pytest-cov = "*"
